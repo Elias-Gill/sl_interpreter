@@ -1,0 +1,17 @@
+{
+  "name": "sl_interpreter",
+  "version": "0.1.0",
+  "description": "Basic interpreter for the SL language. Intended to be used as a library.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
