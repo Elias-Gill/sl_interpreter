@@ -1,0 +1,102 @@
+===================================================
+            TOKENS UTILIZADOS
+===================================================
+
+Declaración y tipos generales:  
+	var  
+	variables        (parecido a var)  
+	const  
+	constantes       (parecido a const)  
+	tipos            (declaración de alias)  
+	tipo             (supongo que es como tipos)
+
+Subrutinas y referencias:  
+	subrutina  
+	retorna  
+	ref              (para paso por referencia en funciones)
+
+Control de flujo:  
+	inicio  
+	fin  
+	programa         (opcional)  
+	si               (if)  
+	sino             (else)  
+	mientras         (while)  
+	repetir          (repeat)  
+	paso             (continue)  
+	eval             (switch)  
+	caso             (case)
+
+Tipos de datos:  
+	logico           (booleano)  
+	numerico         (numérico)  
+	cadena           (string)  
+	registro         (struct)  
+	vector           (unidimensional)  
+	matriz           (multidimensional)  
+
+Operadores lógicos:  
+	and  
+	or  
+	not
+
+No usadas (generar mensajes de error):  
+	lib  
+	libext
+	archivo
+
+Caracteres y símbolos especiales:  
+	Coma (;) para separacion de sentencias en una sola linea  
+	Comillas dobles (") para strings  
+	Comillas simples (') para caracteres sueltos  
+	Barra (/)
+	Asterisco (*)  
+	Llaves ({ })  
+	Paréntesis (( ))  
+	Dos puntos (:) para tipo  
+	Igual (=) para asignación  
+	Mayor que (>)  
+	Menor que (<)  
+	Más (+)  
+	Menos (-)  
+	Potencia (^)
+    Salto de linea (\n)
+
+Otros:  
+	Identificadores (Nombres de variables)
+
+===================================================
+        ESTRUCTURA BASICA DE UN PROGRAMA
+===================================================
+
+programa nombre_del_programa (opcional)
+const  
+	Declaración de una o más constantes globales.
+tipos  
+	Declaración de uno o más tipos de datos.
+var  
+	Declaración de una o más variables globales.
+
+*Nota*: Las secciones const, tipos y var pueden aparecer cero o más veces, en cualquier orden.
+
+// Main del programa, debe de ir siempre primero que las subrutinas
+inicio  
+	Aquí comienza el bloque de sentencias del programa.  
+	...  
+	sentencias  
+	...
+fin
+
+
+subrutina nombre_subrutina (ref a: numerico, b: logico) retorna tipo_dato
+const  
+	Constantes locales a la subrutina
+tipos  
+	Tipos locales a la subrutina
+var  
+	Variables locales a la subrutina
+inicio  
+	...  
+	sentencias  
+	...
+fin
