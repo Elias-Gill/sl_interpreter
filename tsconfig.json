@@ -1,33 +1,35 @@
 {
-  "compilerOptions": {
-    "moduleResolution": "nodenext",
+    "compilerOptions": {
+        "moduleResolution": "nodenext",
+        "allowImportingTsExtensions": true,
 
-    // File Layout
-    "rootDir": "src",
-    "outDir": "dist",
+        // File Layout
+        "rootDir": "src",
+        "outDir": "dist",
 
-    // Other Outputs
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
+        // Other Outputs
+        "sourceMap": true,
+        "declaration": true,
+        "declarationMap": true,
 
-    // Stricter Typechecking Options
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+        // Stricter Typechecking Options
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
 
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true,
+        // Recommended Options
+        "strict": true,
+        "verbatimModuleSyntax": true,
+        "isolatedModules": true,
+        "noUncheckedSideEffectImports": true,
+        "moduleDetection": "force",
+        "skipLibCheck": true,
+        "target": "ES2019",
+        "module": "ESNext",
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true
+    },
 
-    "target": "ES2019",
-    "module": "ESNext",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["src"]
+    "include": [
+        "src"
+    ]
 }

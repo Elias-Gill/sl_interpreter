@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
-import type { TokenType, Token } from "./../lexer";
-import { Lexer } from "./../lexer";
+import type { TokenType, Token } from "./../lexer.ts";
+import { Lexer } from "./../lexer.ts";
 
+// For debug purposes
 function tokenToString(tok: Token): string {
     return `{ type: ${tok.type}, literal: "${tok.literal}" }`;
 }
@@ -100,6 +101,18 @@ describe("Lexer basic tests", () => {
 
     it("should tokenize identifiers", () => {
         const input = `myVar _foo bar123`;
+        const lexer = new Lexer(input);
+
+        for (let i = 0; i < 3; i++) {
+            const tok = lexer.nextToken();
+            expect(tok.type).toBe("IDENTIFIER");
+            expect(tok.literal).toMatch(/^[a-zA-Z_][a-zA-Z0-9_]*$/);
+        }
+    });
+
+    it("should ignore commnents", () => {
+        const input = `// Comentario a ignorar
+                myVar _foo bar123`;
         const lexer = new Lexer(input);
 
         for (let i = 0; i < 3; i++) {

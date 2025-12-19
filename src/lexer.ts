@@ -76,6 +76,16 @@ class Lexer {
     // =          Private Methods           =
     // ======================================
 
+    // Mirar un caracter por delante del caracter actual.
+    private peekChar() {
+        if (this.readPosition >= this.input.length) {
+            return "";
+        } else {
+            // @ts-ignore
+            return this.input[this.readPosition];
+        }
+    }
+
     private readChar() {
         if (this.readPosition >= this.input.length) {
             this.ch = "";
@@ -139,6 +149,20 @@ class Lexer {
         this.skipWhitespace();
 
         let tok: Token;
+
+        // Primero revisar que no estemos frente a un comentario, en cuyo caso
+        // simplemente ignoramos toda la linea
+        if (this.ch == "/" && this.peekChar() == "/") {
+            this.readChar();
+            // @ts-ignore (typescript trata de hacer comparaciones que no tienen
+            // sentido)
+            while (this.ch != "\n" && this.ch != "") {
+                // Saltarse todo hasta el primer salto de linea o el final del archivo
+                this.readChar();
+            }
+            this.readChar(); // Skip '\n'
+            this.skipWhitespace();
+        }
 
         switch (this.ch) {
             case ";":
