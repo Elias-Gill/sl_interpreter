@@ -65,7 +65,6 @@ class Lexer {
     private position: number = 0; // posición actual en input (char leído)
     private readPosition: number = 0; // posición siguiente a leer
     private ch: string = ""; // char actual
-    private peekedToken: Token | null = null;
 
     constructor(input: string) {
         this.input = input;
@@ -139,13 +138,7 @@ class Lexer {
     // =        Public API                  =
     // ======================================
 
-    public nextToken(): Token {
-        if (this.peekedToken) {
-            const tok = this.peekedToken;
-            this.peekedToken = null;
-            return tok;
-        }
-
+    public nextToken(): Token | null {
         this.skipWhitespace();
 
         let tok: Token;
@@ -247,11 +240,8 @@ class Lexer {
         return tok;
     }
 
-    public lookAhead(): Token {
-        if (!this.peekedToken) {
-            this.peekedToken = this.nextToken();
-        }
-        return this.peekedToken;
+    public lookAhead(): Token | null {
+        return this.nextToken();
     }
 }
 
