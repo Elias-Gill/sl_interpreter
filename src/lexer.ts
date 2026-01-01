@@ -15,10 +15,23 @@ type TokenType =
   | "NUMBER" | "IDENTIFIER" | "EOF" | "ILLEGAL";
 // prettier-ignore-end
 
-interface Token {
+class Token {
     type: TokenType;
     literal: string;
-    pos: number;
+    row: number;
+
+    constructor(type: TokenType, literal: string, position: number) {
+        this.type = type;
+        this.literal = literal;
+        this.row = position;
+    }
+
+    public string(): string {
+        if (this.literal == "\n") {
+            return "\\n";
+        }
+        return this.literal;
+    }
 }
 
 const keywords: Record<string, TokenType> = {
@@ -127,18 +140,14 @@ class Lexer {
     }
 
     private newToken(type: TokenType, ch: string): Token {
-        return {
-            type,
-            literal: ch,
-            pos: this.position,
-        };
+        return new Token(type, ch, this.position);
     }
 
     // ======================================
     // =        Public API                  =
     // ======================================
 
-    public nextToken(): Token | null {
+    public nextToken(): Token {
         this.skipWhitespace();
 
         let tok: Token;
@@ -213,7 +222,7 @@ class Lexer {
                 tok = this.newToken("POW", this.ch);
                 break;
             case "":
-                tok = { type: "EOF", literal: "", pos: this.position };
+                tok = this.newToken("EOF", "");
                 break;
             case "\n":
                 tok = this.newToken("NEWLINE", this.ch);
@@ -226,22 +235,17 @@ class Lexer {
                     if (type === "LIB" || type === "LIBEXT" || type === "ARCHIVO") {
                         throw new Error(`Token '${literal}' is reserved but not allowed.`);
                     }
-
-                    return { type, literal, pos: this.position };
+                    return this.newToken(type, literal);
                 } else if (this.isDigit(this.ch)) {
                     const literal = this.readNumber();
-                    return { type: "NUMBER", literal, pos: this.position };
+                    return this.newToken("NUMBER", literal);
                 } else {
-                    tok = this.newToken("ILLEGAL", this.ch);
+                    return this.newToken("ILLEGAL", this.ch);
                 }
         }
 
         this.readChar();
         return tok;
-    }
-
-    public lookAhead(): Token | null {
-        return this.nextToken();
     }
 }
 

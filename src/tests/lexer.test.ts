@@ -132,23 +132,6 @@ describe("Lexer basic tests", () => {
         }
     });
 
-    it("should support lookAhead without advancing", () => {
-        const input = `var x = 5;`;
-        const lexer = new Lexer(input);
-
-        const firstLook = lexer.lookAhead();
-        expect(firstLook.type).toBe("VAR");
-
-        const firstNext = lexer.nextToken();
-        expect(firstNext).toEqual(firstLook);
-
-        const secondLook = lexer.lookAhead();
-        expect(secondLook.type).toBe("IDENTIFIER");
-
-        const secondNext = lexer.nextToken();
-        expect(secondNext).toEqual(secondLook);
-    });
-
     it("should handle empty input and EOF", () => {
         const lexer = new Lexer("");
         const tok = lexer.nextToken();

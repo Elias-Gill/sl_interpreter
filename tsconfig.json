@@ -1,6 +1,8 @@
 {
     "compilerOptions": {
         "moduleResolution": "nodenext",
+        "module": "nodenext",
+        "emitDeclarationOnly": true,
         "allowImportingTsExtensions": true,
 
         // File Layout
@@ -24,7 +26,6 @@
         "moduleDetection": "force",
         "skipLibCheck": true,
         "target": "ES2019",
-        "module": "ESNext",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true
     },
