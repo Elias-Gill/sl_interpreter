@@ -17,6 +17,7 @@ export abstract class ExpressionNode implements Node {
         throw new Error("Method not implemented.");
     }
     string(depth: number): string {
+        depth; // To supress anoying lsp message
         throw new Error("Method not implemented.");
     }
     nodeType(): NodeType {
@@ -29,6 +30,7 @@ export abstract class StatementNode implements Node {
         throw new Error("Method not implemented.");
     }
     string(depth: number): string {
+        depth; // To supress anoying lsp message
         throw new Error("Method not implemented.");
     }
     nodeType(): NodeType {
@@ -52,7 +54,7 @@ export class VarDeclaration extends StatementNode implements Node {
         this.token = token;
     }
 
-    public string(depth: number): string {
+    public override string(depth: number): string {
         let out = `${indent(depth)}VarDeclaration\n`;
         out += `${indent(depth + 1)}Identifier:\n`;
         out += this.identifier.string(depth + 2);
@@ -70,7 +72,7 @@ export class VarDeclaration extends StatementNode implements Node {
         return out;
     }
 
-    public tokenLiteral(): string {
+    public override tokenLiteral(): string {
         return this.token.literal;
     }
 }
@@ -87,7 +89,7 @@ export class VariablesStatement extends StatementNode implements Node {
         this.declarations = new Array();
     }
 
-    public string(depth: number): string {
+    public override string(depth: number): string {
         let out = `${indent(depth)}VariablesStatement\n`;
         for (const decl of this.declarations) {
             out += decl.string(depth + 1);
@@ -95,7 +97,7 @@ export class VariablesStatement extends StatementNode implements Node {
         return out;
     }
 
-    public tokenLiteral(): string {
+    public override tokenLiteral(): string {
         return this.token.literal;
     }
 }
@@ -109,13 +111,13 @@ export class PrefixExpression extends ExpressionNode implements Node {
     public token!: Token;
     public operator!: string;
 
-    public string(depth: number): string {
+    public override string(depth: number): string {
         let out = `${indent(depth)}PrefixExpression (${this.operator})\n`;
         out += this.right.string(depth + 1);
         return out;
     }
 
-    public tokenLiteral(): string {
+    public override tokenLiteral(): string {
         return this.token.literal;
     }
 }
@@ -126,7 +128,7 @@ export class InfixExpression extends ExpressionNode implements Node {
     public token!: Token;
     public operator!: string;
 
-    public string(depth: number): string {
+    public override string(depth: number): string {
         let out = `${indent(depth)}InfixExpression (${this.operator})\n`;
         out += `${indent(depth + 1)}Left:\n`;
         out += this.left.string(depth + 2);
@@ -139,7 +141,7 @@ export class InfixExpression extends ExpressionNode implements Node {
         return out;
     }
 
-    public tokenLiteral(): string {
+    public override tokenLiteral(): string {
         return this.token.literal;
     }
 }
@@ -154,11 +156,11 @@ export class Identifier extends ExpressionNode implements Node {
         this.value = token.literal;
     }
 
-    public string(depth: number): string {
+    public override string(depth: number): string {
         return `${indent(depth)}Identifier (${this.value})\n`;
     }
 
-    public tokenLiteral(): string {
+    public override tokenLiteral(): string {
         return this.token.literal;
     }
 }
@@ -173,11 +175,11 @@ export class NumberNode extends ExpressionNode implements Node {
         this.value = token.literal;
     }
 
-    public string(depth: number): string {
+    public override string(depth: number): string {
         return `${indent(depth)}Number (${this.value})\n`;
     }
 
-    public tokenLiteral(): string {
+    public override tokenLiteral(): string {
         return this.token.literal;
     }
 }
@@ -192,11 +194,11 @@ export class TypeExpression extends ExpressionNode implements Node {
         this.value = token.literal;
     }
 
-    public string(depth: number): string {
+    public override string(depth: number): string {
         return `${indent(depth)}Type (${this.value})\n`;
     }
 
-    public tokenLiteral(): string {
+    public override tokenLiteral(): string {
         return this.token.literal;
     }
 }

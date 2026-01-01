@@ -22,13 +22,19 @@ class Error {
     }
 }
 
-// CAUTION: the order matters here (a lot)
+// WARNING: the order matters here (a lot) !!
+// prettier-ignore
 enum Precedence {
-    MIN = 0,
-    DIVISION,
-    PARENTESIS,
+    MIN = 0,        // LOWEST
+    EQUALS,         // ==, !=
+    GREATLESS,      // <, >
+    ADITION,        // +, -
+    DIVISION,       // *, /
+    PREFIX,         // -X, !X
+    PARENTESIS,     // foo(bar), (expresión)
     MAX,
 }
+// prettier-ignore-end
 
 class Parser {
     private lexer: Lexer;
@@ -61,6 +67,10 @@ class Parser {
 
         // Register infix funcions
         this.registerInfix("PLUS", this.parseInfixExpression.bind(this));
+        this.registerInfix("MINUS", this.parseInfixExpression.bind(this));
+        this.registerInfix("SLASH", this.parseInfixExpression.bind(this));
+        this.registerInfix("ASTERISK", this.parseInfixExpression.bind(this));
+        this.registerInfix("POW", this.parseInfixExpression.bind(this));
     }
 
     // ======================================
@@ -145,8 +155,10 @@ class Parser {
             this.errors.push(new Error("Expected New Line", this.currentToken!));
         }
 
-        // NOTE: here i can check and skip over consecutive newlines
-        this.advanceToken(); // Skip over
+        // Skip over consecutive newlines
+        while (this.currentTokenIs("NEWLINE")) {
+            this.advanceToken();
+        }
 
         var stmt = new VariablesStatement(this.currentToken!);
 
@@ -200,9 +212,6 @@ class Parser {
     }
 
     private parseExpression(curPrecedence: Precedence): ExpressionNode | null {
-        // TODO: make the precedences map, the peek precedence function and parse simple
-        // adition and substraction expressions first. Lets iterate easy, simple and small
-
         var prefix = this.prefixTable.get(this.currentToken!.type);
         if (prefix == undefined) {
             this.errors.push(
@@ -240,6 +249,8 @@ class Parser {
     }
 
     private parseInfixExpression(left: ExpressionNode): InfixExpression {
+        this.printParserState();
+
         var token = this.currentToken!;
         var exp = new InfixExpression();
 
@@ -248,6 +259,9 @@ class Parser {
         exp.token = token!;
         exp.operator = token!.literal;
         exp.left = left;
+
+        this.advanceToken();
+
         exp.right = this.parseExpression(precedence);
 
         return exp;
@@ -367,13 +381,24 @@ class Parser {
 
 function getPrecedence(token: Token): number {
     switch (token.type) {
-        case "EOF":
+        // GREATLESS: <, >
+        case "LT":
+        case "GT":
+            return Precedence.GREATLESS;
+        // SUM: +, -
+        case "PLUS":
+        case "MINUS":
+            return Precedence.ADITION;
+        // PROD: *, /
         case "ASTERISK":
         case "SLASH":
             return Precedence.DIVISION;
+        // CALL: function(), LPAREN
         case "LPAREN":
-        case "RPAREN":
             return Precedence.PARENTESIS;
+        // PREFIX operators
+        case "NOT":
+            return Precedence.PREFIX;
         default:
             return Precedence.MIN;
     }
