@@ -2,23 +2,35 @@ import type { Token } from "./lexer.ts";
 
 type NodeType = "STATEMENT" | "EXPRESSION";
 
+function indent(depth: number): string {
+    return "  ".repeat(depth);
+}
+
 export interface Node {
-    // returns the token literal of the current token
     tokenLiteral(): string;
-
-    // returns a string representation of the statements in the ast
-    toString(depth: number): string;
-
+    string(depth: number): string;
     nodeType(): NodeType;
 }
 
-export abstract class ExpressionNode {
+export abstract class ExpressionNode implements Node {
+    tokenLiteral(): string {
+        throw new Error("Method not implemented.");
+    }
+    string(depth: number): string {
+        throw new Error("Method not implemented.");
+    }
     nodeType(): NodeType {
         return "EXPRESSION";
     }
 }
 
-export abstract class StatementNode {
+export abstract class StatementNode implements Node {
+    tokenLiteral(): string {
+        throw new Error("Method not implemented.");
+    }
+    string(depth: number): string {
+        throw new Error("Method not implemented.");
+    }
     nodeType(): NodeType {
         return "STATEMENT";
     }
@@ -40,9 +52,22 @@ export class VarDeclaration extends StatementNode implements Node {
         this.token = token;
     }
 
-    public toString(depth: number): string {
-        // TODO: implement
-        return "";
+    public string(depth: number): string {
+        let out = `${indent(depth)}VarDeclaration\n`;
+        out += `${indent(depth + 1)}Identifier:\n`;
+        out += this.identifier.string(depth + 2);
+
+        if (this.type) {
+            out += `${indent(depth + 1)}Type:\n`;
+            out += this.type.string(depth + 2);
+        }
+
+        if (this.value) {
+            out += `${indent(depth + 1)}Value:\n`;
+            out += this.value.string(depth + 2);
+        }
+
+        return out;
     }
 
     public tokenLiteral(): string {
@@ -62,9 +87,12 @@ export class VariablesStatement extends StatementNode implements Node {
         this.declarations = new Array();
     }
 
-    public toString(depth: number): string {
-        // TODO: implement
-        return "";
+    public string(depth: number): string {
+        let out = `${indent(depth)}VariablesStatement\n`;
+        for (const decl of this.declarations) {
+            out += decl.string(depth + 1);
+        }
+        return out;
     }
 
     public tokenLiteral(): string {
@@ -76,17 +104,44 @@ export class VariablesStatement extends StatementNode implements Node {
 // =            EXPRESSIONS             =
 // ======================================
 
-export class PrefixExpression extends ExpressionNode {
+export class PrefixExpression extends ExpressionNode implements Node {
     public right!: ExpressionNode;
     public token!: Token;
     public operator!: string;
+
+    public string(depth: number): string {
+        let out = `${indent(depth)}PrefixExpression (${this.operator})\n`;
+        out += this.right.string(depth + 1);
+        return out;
+    }
+
+    public tokenLiteral(): string {
+        return this.token.literal;
+    }
 }
 
-export class InfixExpression extends ExpressionNode {
+export class InfixExpression extends ExpressionNode implements Node {
     public left!: ExpressionNode;
     public right!: ExpressionNode | null;
     public token!: Token;
     public operator!: string;
+
+    public string(depth: number): string {
+        let out = `${indent(depth)}InfixExpression (${this.operator})\n`;
+        out += `${indent(depth + 1)}Left:\n`;
+        out += this.left.string(depth + 2);
+
+        if (this.right) {
+            out += `${indent(depth + 1)}Right:\n`;
+            out += this.right.string(depth + 2);
+        }
+
+        return out;
+    }
+
+    public tokenLiteral(): string {
+        return this.token.literal;
+    }
 }
 
 export class Identifier extends ExpressionNode implements Node {
@@ -99,9 +154,8 @@ export class Identifier extends ExpressionNode implements Node {
         this.value = token.literal;
     }
 
-    public toString(depth: number): string {
-        // TODO: implement
-        return "";
+    public string(depth: number): string {
+        return `${indent(depth)}Identifier (${this.value})\n`;
     }
 
     public tokenLiteral(): string {
@@ -119,9 +173,8 @@ export class NumberNode extends ExpressionNode implements Node {
         this.value = token.literal;
     }
 
-    public toString(depth: number): string {
-        // TODO: implement
-        return "";
+    public string(depth: number): string {
+        return `${indent(depth)}Number (${this.value})\n`;
     }
 
     public tokenLiteral(): string {
@@ -139,9 +192,8 @@ export class TypeExpression extends ExpressionNode implements Node {
         this.value = token.literal;
     }
 
-    public toString(depth: number): string {
-        // TODO: implement
-        return "";
+    public string(depth: number): string {
+        return `${indent(depth)}Type (${this.value})\n`;
     }
 
     public tokenLiteral(): string {

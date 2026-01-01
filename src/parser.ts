@@ -40,8 +40,8 @@ class Parser {
     private prefixTable: Map<TokenType, PrefixFn>;
     private infixTable: Map<TokenType, InfixFn>;
 
-    private currentToken!: Token;
-    private nextToken!: Token;
+    private currentToken: Token;
+    private nextToken: Token;
 
     constructor(lexer: Lexer) {
         this.prefixTable = new Map();
@@ -52,8 +52,8 @@ class Parser {
         this.ast = new Array<StatementNode>();
 
         // Prepare parser state by loading the first two tokens
-        this.advanceToken();
-        this.advanceToken();
+        this.currentToken = lexer.nextToken();
+        this.nextToken = lexer.nextToken();
 
         // Register prefix functions
         this.registerPrefix("IDENTIFIER", this.parseIdentifier.bind(this));
@@ -105,9 +105,6 @@ class Parser {
                 // TODO:
                 return null;
             case "RETORNA":
-                // TODO:
-                return null;
-            case "SUBRUTINA":
                 // TODO:
                 return null;
             case "SUBRUTINA":
@@ -170,7 +167,12 @@ class Parser {
 
     private parseVariableStatement(): StatementNode | null {
         if (this.currentToken == null) {
-            // FIX: error handling
+            this.errors.push(
+                new Error(
+                    "Unexpected end of input while parsing variable declaration",
+                    this.nextToken!,
+                ),
+            );
             return null;
         }
 
@@ -179,7 +181,13 @@ class Parser {
         // check equals sign and skip over
         this.advanceToken();
         if (!this.currentTokenIs("ASSIGN")) {
-            // FIX: error handling
+            this.errors.push(
+                new Error(
+                    `Expected '=' after identifier, got ${this.currentToken!.literal}`,
+                    this.currentToken!,
+                ),
+            );
+            this.skipUntilStatement();
             return null;
         }
         this.advanceToken();
@@ -197,15 +205,18 @@ class Parser {
 
         var prefix = this.prefixTable.get(this.currentToken!.type);
         if (prefix == undefined) {
-            // FIX: raise error
-            console.log("No prefix found for type: " + this.currentToken?.type);
+            this.errors.push(
+                new Error(
+                    `No prefix parser for token ${this.currentToken!.type}`,
+                    this.currentToken!,
+                ),
+            );
             return null;
         }
 
         var exp = prefix();
 
         while (!this.nextTokenIs("SEMICOLON") && curPrecedence < getPrecedence(this.nextToken!)) {
-
             var infix = this.infixTable.get(this.nextToken!.type);
             if (infix == undefined) {
                 console.log("No infix for: " + this.nextToken.type);
@@ -242,6 +253,13 @@ class Parser {
         return exp;
     }
 
+    // Error handling recovery strategy: skip expressions parsing until we found the next statement
+    private skipUntilStatement() {
+        while (this.currentToken != null && !this.isStatement(this.currentToken.type)) {
+            this.advanceToken();
+        }
+    }
+
     // ======================================
     // =                Utils               =
     // ======================================
@@ -265,8 +283,6 @@ class Parser {
             case "CONST":
                 return true;
             case "RETORNA":
-                return true;
-            case "SUBRUTINA":
                 return true;
             case "SUBRUTINA":
                 return true;
