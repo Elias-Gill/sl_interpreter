@@ -36,6 +36,31 @@ enum Precedence {
 }
 // prettier-ignore-end
 
+function getPrecedence(token: Token): number {
+    switch (token.type) {
+        // GREATLESS: <, >
+        case "LT":
+        case "GT":
+            return Precedence.GREATLESS;
+        // SUM: +, -
+        case "PLUS":
+        case "MINUS":
+            return Precedence.ADITION;
+        // PROD: *, /
+        case "ASTERISK":
+        case "SLASH":
+            return Precedence.DIVISION;
+        // CALL: function(), LPAREN
+        case "LPAREN":
+            return Precedence.PARENTESIS;
+        // PREFIX operators
+        case "NOT":
+            return Precedence.PREFIX;
+        default:
+            return Precedence.MIN;
+    }
+}
+
 class Parser {
     private lexer: Lexer;
 
@@ -112,7 +137,7 @@ class Parser {
                 return this.parseVariablesDeclaration();
             case "CONSTANTES":
             case "CONST":
-                return this.parseConstantsDeclaration();
+                return null;
             case "RETORNA":
                 // TODO:
                 return null;
@@ -130,17 +155,12 @@ class Parser {
             // SL does NOT support standalone expressions; everything must be part
             // of a subprogram, some declaration like var, or the main function.
             default:
-                this.errors.push(
+                this.pushErrorAndRecover(
                     new Error(
                         `Unexpected expression: ${this.currentToken!.literal} [${this.currentToken!.type}]`,
                         this.currentToken!,
                     ),
                 );
-                // As an error recovery strategy we skip over expression until we found the
-                // next statement
-                while (!this.isStatement(this.currentToken!.type)) {
-                    this.advanceToken();
-                }
                 return null;
         }
     }
@@ -148,7 +168,7 @@ class Parser {
     private parseVariablesDeclaration(): StatementNode | null {
         // There has to be a new line character after the "VAR" keyword
         if (!this.nextTokenIs("NEWLINE")) {
-            this.errors.push(new Error("Expected New Line", this.currentToken!));
+            this.pushErrorAndRecover(new Error("Expected New Line", this.currentToken!));
         }
 
         this.advanceToken(); // skip over "VAR"
@@ -161,7 +181,7 @@ class Parser {
         while (this.currentTokenIs("IDENTIFIER")) {
             var declaration = this.parseVariableStatement();
             if (declaration == null) {
-                this.errors.push(new Error("Expected variable declaration", this.currentToken!));
+                this.pushErrorAndRecover(new Error("Expected variable declaration", this.currentToken!));
                 return null;
             }
             variables.push(declaration);
@@ -178,37 +198,6 @@ class Parser {
         return stmt;
     }
 
-    private parseConstantsDeclaration(): StatementNode | null {
-        // Skip over "var" keyword
-        this.advanceToken();
-
-        // HAS to be a new line character
-        if (!this.currentTokenIs("NEWLINE")) {
-            this.errors.push(new Error("Expected New Line", this.currentToken!));
-        }
-
-        // Skip over consecutive newlines
-        while (this.currentTokenIs("NEWLINE")) {
-            this.advanceToken();
-        }
-
-        var stmt = new VariablesStatement(this.currentToken!);
-
-        var variables = new Array<StatementNode>();
-        while (this.currentTokenIs("IDENTIFIER")) {
-            var declaration = this.parseConstantStatement();
-            if (declaration == null) {
-                this.errors.push(new Error("Expected variable declaration", this.currentToken!));
-                return null;
-            }
-            variables.push(declaration);
-        }
-
-        stmt.declarations = variables;
-
-        return stmt;
-    }
-
     private parseVariableStatement(): StatementNode | null {
         var stmt = new VarDeclaration(this.currentToken!);
 
@@ -217,13 +206,12 @@ class Parser {
 
         // check equals sign and skip over
         if (!this.currentTokenIs("ASSIGN")) {
-            this.errors.push(
+            this.pushErrorAndRecover(
                 new Error(
                     `Expected '=' after identifier, got ${this.currentToken!.literal}`,
                     this.currentToken!,
                 ),
             );
-            this.skipUntilStatement();
             return null;
         }
         this.advanceToken();
@@ -237,46 +225,12 @@ class Parser {
         return stmt;
     }
 
-    private parseConstantStatement(): StatementNode | null {
-        if (this.currentToken == null) {
-            this.errors.push(
-                new Error(
-                    "Unexpected end of input while parsing variable declaration",
-                    this.nextToken!,
-                ),
-            );
-            return null;
-        }
-
-        var stmt = new VarDeclaration(this.currentToken!);
-
-        // check equals sign and skip over
-        this.advanceToken();
-        if (!this.currentTokenIs("ASSIGN")) {
-            this.errors.push(
-                new Error(
-                    `Expected '=' after identifier, got ${this.currentToken!.literal}`,
-                    this.currentToken!,
-                ),
-            );
-            this.skipUntilStatement();
-            return null;
-        }
-        this.advanceToken();
-
-        // TODO: parse Type specification
-
-        stmt.value = this.parseExpression(Precedence.MIN);
-
-        return stmt;
-    }
-
     private parseExpression(curPrecedence: Precedence): ExpressionNode | null {
         // FIX: expresiones deben de poder soportar saltos de linea, ejemplo:
         // (x = 5 + \n 5). Pero algo como (x = 5 \n + 5) ya no es valido, ojo
         var prefix = this.prefixTable.get(this.currentToken!.type);
         if (prefix == undefined) {
-            this.errors.push(
+            this.pushErrorAndRecover(
                 new Error(
                     `No prefix parser for token ${this.currentToken!.type}`,
                     this.currentToken!,
@@ -327,16 +281,28 @@ class Parser {
         return exp;
     }
 
-    // Error handling recovery strategy: skip expressions parsing until we found the next statement
-    private skipUntilStatement() {
-        while (this.currentToken != null && !this.isStatement(this.currentToken.type)) {
+    // ======================================
+    // =                Utils               =
+    // ======================================
+
+    private pushErrorAndRecover(error: Error) {
+        this.errors.push(error);
+        this.skipUntilNextStatement();
+    }
+
+    // Error handling recovery strategy: skip expressions parsing until we found the next statement.
+    // This method lefts the next statement as the "next" token, so it can be in a valid state
+    // when the parseProgram tries to continue.
+    private skipUntilNextStatement() {
+        while (this.currentToken != null && !this.isStatement(this.nextToken.type)) {
             this.advanceToken();
         }
     }
 
-    // ======================================
-    // =                Utils               =
-    // ======================================
+    private advanceToken() {
+        this.currentToken = this.nextToken;
+        this.nextToken = this.lexer.nextToken();
+    }
 
     private currentTokenIs(type: TokenType): boolean {
         return this.currentToken?.type == type;
@@ -348,10 +314,10 @@ class Parser {
 
     // Consume consecutive new line tokens until the NEXT token is not a NEWLINE.
     //
-    // In practice, this means that the function always leaves the current token 
+    // In practice, this means that the function always leaves the current token
     // as a NEWLINE (the last one in the sequence) if there was at least one.
     //
-    // It is up to the calling function to decide whether to skip over that 
+    // It is up to the calling function to decide whether to skip over that
     // remaining NEWLINE token or not.
     private consumeNewLines() {
         while (this.nextTokenIs("NEWLINE")) {
@@ -375,11 +341,6 @@ class Parser {
             default:
                 return false;
         }
-    }
-
-    private advanceToken() {
-        this.currentToken = this.nextToken;
-        this.nextToken = this.lexer.nextToken();
     }
 
     private registerInfix(token: TokenType, fn: InfixFn) {
@@ -443,31 +404,6 @@ class Parser {
             console.log(`  ${key}`);
         }
         console.log("========================");
-    }
-}
-
-function getPrecedence(token: Token): number {
-    switch (token.type) {
-        // GREATLESS: <, >
-        case "LT":
-        case "GT":
-            return Precedence.GREATLESS;
-        // SUM: +, -
-        case "PLUS":
-        case "MINUS":
-            return Precedence.ADITION;
-        // PROD: *, /
-        case "ASTERISK":
-        case "SLASH":
-            return Precedence.DIVISION;
-        // CALL: function(), LPAREN
-        case "LPAREN":
-            return Precedence.PARENTESIS;
-        // PREFIX operators
-        case "NOT":
-            return Precedence.PREFIX;
-        default:
-            return Precedence.MIN;
     }
 }
 
