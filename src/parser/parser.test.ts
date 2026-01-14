@@ -47,7 +47,7 @@ describe("Parser simple tests", () => {
         const ast = parseAndGetAst(sourceCode);
 
         expect(ast.length).toBe(1);
-        const stmt = expectVariablesStatement(ast[0]!, 1);
+        const stmt = expectVariablesStatement(ast[0]!, 2);
 
         const decl1 = stmt.declarations[0] as VarDeclaration;
         expectVarDeclaration(decl1, "var1");
@@ -63,8 +63,9 @@ describe("Parser simple tests", () => {
                         var 
                             var1 = 1
                         var 
-                            var2 = 2`; const ast = parseAndGetAst(sourceCode);
+                            var2 = 2`; 
 
+        const ast = parseAndGetAst(sourceCode);
         expect(ast.length).toBe(2);
 
         const stmt1 = expectVariablesStatement(ast[0]!, 1);

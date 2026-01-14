@@ -85,6 +85,7 @@ class Parser {
             if (stmt != null) {
                 this.ast.push(stmt);
             }
+            this.advanceToken();
         }
         return false;
     }
@@ -145,18 +146,14 @@ class Parser {
     }
 
     private parseVariablesDeclaration(): StatementNode | null {
-        // Skip over "var" keyword
-        this.advanceToken();
-
-        // HAS to be a new line character
-        if (!this.currentTokenIs("NEWLINE")) {
+        // There has to be a new line character after the "VAR" keyword
+        if (!this.nextTokenIs("NEWLINE")) {
             this.errors.push(new Error("Expected New Line", this.currentToken!));
         }
 
-        // Skip over consecutive newlines
-        while (this.currentTokenIs("NEWLINE")) {
-            this.advanceToken();
-        }
+        this.advanceToken(); // skip over "VAR"
+        this.consumeNewLines();
+        this.advanceToken(); // skip over the last new line char
 
         var stmt = new VariablesStatement(this.currentToken!);
 
@@ -169,8 +166,11 @@ class Parser {
             }
             variables.push(declaration);
 
-            this.advanceToken();
             this.consumeNewLines();
+
+            if (this.nextTokenIs("IDENTIFIER")) {
+                this.advanceToken();
+            }
         }
 
         stmt.declarations = variables;
@@ -212,8 +212,10 @@ class Parser {
     private parseVariableStatement(): StatementNode | null {
         var stmt = new VarDeclaration(this.currentToken!);
 
-        // check equals sign and skip over
+        // skip over identifier
         this.advanceToken();
+
+        // check equals sign and skip over
         if (!this.currentTokenIs("ASSIGN")) {
             this.errors.push(
                 new Error(
@@ -344,8 +346,15 @@ class Parser {
         return this.nextToken?.type == type;
     }
 
+    // Consume consecutive new line tokens until the NEXT token is not a NEWLINE.
+    //
+    // In practice, this means that the function always leaves the current token 
+    // as a NEWLINE (the last one in the sequence) if there was at least one.
+    //
+    // It is up to the calling function to decide whether to skip over that 
+    // remaining NEWLINE token or not.
     private consumeNewLines() {
-        while (this.currentTokenIs("NEWLINE")) {
+        while (this.nextTokenIs("NEWLINE")) {
             this.advanceToken();
         }
     }
@@ -461,6 +470,5 @@ function getPrecedence(token: Token): number {
             return Precedence.MIN;
     }
 }
-
 
 export { Parser };
