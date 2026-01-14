@@ -3,7 +3,7 @@ type TokenType =
   // Palabras reservadas
   | "VAR" | "VARIABLES" | "CONST" | "CONSTANTES" | "TIPOS" | "TIPO" | "SUBRUTINA"
   | "RETORNA" | "REF" | "INICIO" | "FIN" | "PROGRAMA" | "SI" | "SINO" | "MIENTRAS"
-  | "REPETIR" | "PASO" | "EVAL" | "CASO" | "LOGICO" | "NUMERICO" | "CADENA"
+  | "REPETIR" | "PASO" | "SALIR" | "EVAL" | "CASO" | "LOGICO" | "NUMERICO" | "CADENA"
   | "REGISTRO" | "VECTOR" | "MATRIZ" | "AND" | "OR" | "NOT"
   // no usadas, error
   | "LIB" | "LIBEXT" | "ARCHIVO"
@@ -53,6 +53,7 @@ const keywords: Record<string, TokenType> = {
     sino: "SINO",
     mientras: "MIENTRAS",
     repetir: "REPETIR",
+    salir: "SALIR",
     paso: "PASO",
     eval: "EVAL",
     caso: "CASO",

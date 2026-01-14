@@ -1,4 +1,4 @@
-import type { Token } from "./lexer.ts";
+import type { Token } from "../lexer/lexer.ts";
 
 type NodeType = "STATEMENT" | "EXPRESSION";
 
@@ -102,6 +102,16 @@ export class VariablesStatement extends StatementNode implements Node {
     }
 }
 
+export class ConstantsStatement extends VariablesStatement {
+    public override string(depth: number): string {
+        let out = `${indent(depth)}ConstantsStatement\n`;
+        for (const decl of this.declarations) {
+            out += decl.string(depth + 1);
+        }
+        return out;
+    }
+}
+
 // ======================================
 // =            EXPRESSIONS             =
 // ======================================
@@ -201,4 +211,21 @@ export class TypeExpression extends ExpressionNode implements Node {
     public override tokenLiteral(): string {
         return this.token.literal;
     }
+}
+
+// ========================================================
+// =                   UTILITIES                          =
+// ========================================================
+
+export function astToString(ast: StatementNode[] | null) {
+    if (ast == null) {
+        return "Null AST";
+    }
+
+    var str = "";
+    ast.forEach((stmt) => {
+        str += stmt.string(0);
+    });
+
+    return str;
 }

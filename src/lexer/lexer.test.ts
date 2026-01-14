@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import type { TokenType, Token } from "./../lexer.ts";
-import { Lexer } from "./../lexer.ts";
+import type { TokenType, Token } from "./lexer.ts";
+import { Lexer } from "./lexer.ts";
 
 // For debug purposes
 function tokenToString(tok: Token): string {

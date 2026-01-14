@@ -1,4 +1,4 @@
-import type { Lexer, Token, TokenType } from "./lexer.js";
+import type { Lexer, Token, TokenType } from "../lexer/lexer.js";
 import {
     ExpressionNode,
     Identifier,
@@ -85,7 +85,6 @@ class Parser {
             if (stmt != null) {
                 this.ast.push(stmt);
             }
-            this.advanceToken();
         }
         return false;
     }
@@ -112,8 +111,7 @@ class Parser {
                 return this.parseVariablesDeclaration();
             case "CONSTANTES":
             case "CONST":
-                // TODO:
-                return null;
+                return this.parseConstantsDeclaration();
             case "RETORNA":
                 // TODO:
                 return null;
@@ -170,6 +168,40 @@ class Parser {
                 return null;
             }
             variables.push(declaration);
+
+            this.advanceToken();
+            this.consumeNewLines();
+        }
+
+        stmt.declarations = variables;
+
+        return stmt;
+    }
+
+    private parseConstantsDeclaration(): StatementNode | null {
+        // Skip over "var" keyword
+        this.advanceToken();
+
+        // HAS to be a new line character
+        if (!this.currentTokenIs("NEWLINE")) {
+            this.errors.push(new Error("Expected New Line", this.currentToken!));
+        }
+
+        // Skip over consecutive newlines
+        while (this.currentTokenIs("NEWLINE")) {
+            this.advanceToken();
+        }
+
+        var stmt = new VariablesStatement(this.currentToken!);
+
+        var variables = new Array<StatementNode>();
+        while (this.currentTokenIs("IDENTIFIER")) {
+            var declaration = this.parseConstantStatement();
+            if (declaration == null) {
+                this.errors.push(new Error("Expected variable declaration", this.currentToken!));
+                return null;
+            }
+            variables.push(declaration);
         }
 
         stmt.declarations = variables;
@@ -178,6 +210,32 @@ class Parser {
     }
 
     private parseVariableStatement(): StatementNode | null {
+        var stmt = new VarDeclaration(this.currentToken!);
+
+        // check equals sign and skip over
+        this.advanceToken();
+        if (!this.currentTokenIs("ASSIGN")) {
+            this.errors.push(
+                new Error(
+                    `Expected '=' after identifier, got ${this.currentToken!.literal}`,
+                    this.currentToken!,
+                ),
+            );
+            this.skipUntilStatement();
+            return null;
+        }
+        this.advanceToken();
+
+        // TODO: parse Type specification (no recuerdo si es que realmente hacia falta)
+
+        // FIX: constant SHOULD have an expression on its definition unlike vars that can be
+        // not constant.
+        stmt.value = this.parseExpression(Precedence.MIN);
+
+        return stmt;
+    }
+
+    private parseConstantStatement(): StatementNode | null {
         if (this.currentToken == null) {
             this.errors.push(
                 new Error(
@@ -212,6 +270,8 @@ class Parser {
     }
 
     private parseExpression(curPrecedence: Precedence): ExpressionNode | null {
+        // FIX: expresiones deben de poder soportar saltos de linea, ejemplo:
+        // (x = 5 + \n 5). Pero algo como (x = 5 \n + 5) ya no es valido, ojo
         var prefix = this.prefixTable.get(this.currentToken!.type);
         if (prefix == undefined) {
             this.errors.push(
@@ -249,8 +309,6 @@ class Parser {
     }
 
     private parseInfixExpression(left: ExpressionNode): InfixExpression {
-        this.printParserState();
-
         var token = this.currentToken!;
         var exp = new InfixExpression();
 
@@ -286,23 +344,23 @@ class Parser {
         return this.nextToken?.type == type;
     }
 
+    private consumeNewLines() {
+        while (this.currentTokenIs("NEWLINE")) {
+            this.advanceToken();
+        }
+    }
+
     private isStatement(token: TokenType) {
         switch (token) {
             case "EOF":
-                return true;
             case "VARIABLES":
             case "VAR":
-                return true;
             case "CONSTANTES":
             case "CONST":
-                return true;
             case "RETORNA":
-                return true;
             case "SUBRUTINA":
-                return true;
             case "TIPOS":
             case "TIPO":
-                return true;
             case "INICIO":
                 return true;
             default:
@@ -403,5 +461,6 @@ function getPrecedence(token: Token): number {
             return Precedence.MIN;
     }
 }
+
 
 export { Parser };
