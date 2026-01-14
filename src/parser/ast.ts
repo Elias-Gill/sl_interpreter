@@ -43,10 +43,11 @@ export abstract class StatementNode implements Node {
 // ======================================
 
 export class VarDeclaration extends StatementNode implements Node {
+    token: Token;
     identifier: Identifier;
     value!: ExpressionNode | null;
-    type!: TypeExpression;
-    token: Token;
+    // If type annotation is null, then the type has to be resolved on evaluation time
+    type!: TypeExpression | null;
 
     constructor(token: Token) {
         super();

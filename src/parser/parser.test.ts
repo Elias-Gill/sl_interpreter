@@ -9,10 +9,11 @@ import {
     StatementNode,
     ExpressionNode,
     astToString,
+    TypeExpression,
 } from "./ast.ts";
 import { type ParsingError, ErrorType } from "./errors.ts";
 
-describe("Parser simple tests", () => {
+describe("Simple variable declarations", () => {
     it("parses a simple variable definition", () => {
         const sourceCode = `
                     var
@@ -26,17 +27,21 @@ describe("Parser simple tests", () => {
         expectNumberNode(decl.value!, "5");
     });
 
-    it("parses a simple variable definition with addition expression", () => {
+    it("parses a variable definition with a simple type annotation", () => {
         const sourceCode = `
                     var
-                        x = 5 + 5
+                        x: numerico = 5
                     `;
         const ast = parseAndGetAst(sourceCode);
         expect(ast.length).toBe(1);
         const stmt = expectVariablesStatement(ast[0]!, 1);
         const decl = stmt.declarations[0] as VarDeclaration;
         expectVarDeclaration(decl, "x");
-        expectInfixExpression(decl.value!, "+", "5", "5");
+        expectNumberNode(decl.value!, "5");
+
+        expect(decl.type).not.toBeNull();
+        expect(decl.type).toBeInstanceOf(TypeExpression);
+        expect(decl.type!.tokenLiteral()).toBe("numerico");
     });
 
     it("parses multiple variables in one var block", () => {
@@ -80,13 +85,41 @@ describe("Parser simple tests", () => {
         expectNumberNode(decl2.value!, "2");
     });
 
-    // --- Parsing errors ---
+    // -------------- Parsing errors -----------------
+
     it("should error (NEWLINE expected) on line 1", () => {
         const sourceCode = `var var1 = 1`;
         const errors = parseAndGetAstWithErrors(sourceCode);
         expect(errors.length).toBe(1);
         expect(errors[0]?.type).toBe(ErrorType.ExpectedNewLine);
         expect(errors[0]?.token.row).toBe(1);
+    });
+
+    it("should error (ExpectedTypeAnnotation) after colon (':')", () => {
+        const sourceCode = `
+                        var
+                            x: 123 = 5
+                        `;
+        const errors = parseAndGetAstWithErrors(sourceCode);
+        expect(errors.length).toBe(1);
+        expect(errors[0]!.row).toBe(3);
+        expect(errors[0]!.type).toBe(ErrorType.ExpectedTypeAnnotation);
+    });
+});
+
+describe("Simple mathematical operations", () => {
+    it("parses a variable definition and addition expression", () => {
+        const sourceCode = `var
+                                x = 5 + 5`;
+
+        const ast = parseAndGetAst(sourceCode);
+        expect(ast.length).toBe(1);
+
+        const stmt = expectVariablesStatement(ast[0]!, 1);
+
+        const decl = stmt.declarations[0] as VarDeclaration;
+        expectVarDeclaration(decl, "x");
+        expectInfixExpression(decl.value!, "+", "5", "5");
     });
 });
 
@@ -99,6 +132,9 @@ function parseAndGetAst(sourceCode: string): StatementNode[] {
     const parser = new Parser(lexer);
 
     const hasErrors = parser.parseProgram();
+
+    // Appears only if the test fails
+    console.error(parser.getErrors());
     expect(hasErrors).toBe(false);
 
     const ast = parser.getAst();

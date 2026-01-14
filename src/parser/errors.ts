@@ -10,6 +10,7 @@ export enum ErrorType {
     ExpectedVarDeclaration = "ExpectedVarDeclaration",
     ExpectedEqualSign = "ExpectedEqualSign",
     NoPrefixFound = "NoPrefixFound",
+    ExpectedTypeAnnotation = "ExpectedTypeAnnotation",
 }
 
 export interface ParsingError {

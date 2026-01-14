@@ -23,3 +23,6 @@ Thumbs.db
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Possible protected files
+libro-sl.pdf

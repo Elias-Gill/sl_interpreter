@@ -5,6 +5,7 @@ import {
     InfixExpression,
     NumberNode,
     StatementNode,
+    TypeExpression,
     VarDeclaration,
     VariablesStatement,
 } from "./ast.ts";
@@ -130,6 +131,7 @@ export class Parser {
                 return this.parseVariablesDeclaration();
             case "CONSTANTES":
             case "CONST":
+                // TODO:
                 return null;
             case "RETORNA":
                 // TODO:
@@ -146,7 +148,7 @@ export class Parser {
                 return null;
 
             // SL does NOT support standalone expressions; everything must be part
-            // of a subprogram, some declaration like var, or the main function.
+            // of a subprogram, declaration (tipoos, var, const), or the main function.
             default:
                 this.pushErrorAndRecover(
                     newParsingError(
@@ -177,13 +179,8 @@ export class Parser {
         while (this.currentTokenIs("IDENTIFIER")) {
             var declaration = this.parseVariableStatement();
             if (declaration == null) {
-                this.pushErrorAndRecover(
-                    newParsingError(
-                        ErrorType.ExpectedVarDeclaration,
-                        "Expected variable declaration",
-                        this.currentToken!,
-                    ),
-                );
+                // Do nothing here. Any errors in the variable declaration were
+                // already reported by subparsers, and recovery has already happened.
                 return null;
             }
             variables.push(declaration);
@@ -206,6 +203,17 @@ export class Parser {
         // skip over identifier
         this.advanceToken();
 
+        // parse the optional type annotation
+        if (this.currentTokenIs("COLON")) {
+            const type = this.parseTypeAnnotation();
+            // Do nothing because the parseType function has errors, and the parser state is
+            // already recovered.
+            if (type == null) {
+                return null;
+            }
+            stmt.type = type;
+        }
+
         // check equals sign and skip over
         if (!this.currentTokenIs("ASSIGN")) {
             this.pushErrorAndRecover(
@@ -218,8 +226,6 @@ export class Parser {
             return null;
         }
         this.advanceToken();
-
-        // TODO: parse Type specification (no recuerdo si es que realmente hacia falta)
 
         // FIX: constant SHOULD have an expression on its definition unlike vars that can be
         // not constant.
@@ -266,6 +272,38 @@ export class Parser {
 
     private parseNumber(): ExpressionNode {
         return new NumberNode(this.currentToken!);
+    }
+
+    // Parses the type annotaion if exists. If not exists just returns null
+    private parseTypeAnnotation(): TypeExpression | null {
+        this.advanceToken(); // skip over colon
+
+        // FIX: move type annotations to custom methods because MATRIZ and VECTOR are
+        // parsed with another notation. Check to make this more reliable and clean
+        if (
+            !this.currentTokenIs("IDENTIFIER") &&
+            !this.currentTokenIs("NUMERICO") &&
+            !this.currentTokenIs("LOGICO") &&
+            !this.currentTokenIs("CADENA") &&
+            !this.currentTokenIs("CADENA") &&
+            !this.currentTokenIs("VECTOR") &&
+            !this.currentTokenIs("MATRIZ")
+        ) {
+            this.pushErrorAndRecover(
+                newParsingError(
+                    ErrorType.ExpectedTypeAnnotation,
+                    `Expected a type annotation after ':', got ${this.currentToken!.literal}`,
+                    this.currentToken,
+                ),
+            );
+            return null;
+        }
+
+        const annotation = new TypeExpression(this.currentToken);
+
+        this.advanceToken();
+
+        return annotation;
     }
 
     private parseInfixExpression(left: ExpressionNode): InfixExpression {
@@ -389,7 +427,7 @@ export class Parser {
             console.log("  <none>");
         } else {
             this.errors.forEach((err, idx) => {
-                console.log(`  [${idx}] ${err.message}`);
+                console.log(`  [${idx}] | ${err.row} col ${err.column} | ${err.message}`);
             });
         }
 
