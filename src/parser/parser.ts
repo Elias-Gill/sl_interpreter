@@ -8,19 +8,11 @@ import {
     VarDeclaration,
     VariablesStatement,
 } from "./ast.ts";
+import { newParsingError, type ParsingError } from "./errors.ts";
+import { ErrorType } from "./errors.ts";
 
 type InfixFn = (exp: ExpressionNode) => ExpressionNode;
 type PrefixFn = () => ExpressionNode;
-
-class Error {
-    public message: string;
-    public token: Token;
-
-    constructor(err: string, token: Token) {
-        this.message = err;
-        this.token = token;
-    }
-}
 
 // WARNING: the order matters here (a lot) !!
 // prettier-ignore
@@ -61,12 +53,12 @@ function getPrecedence(token: Token): number {
     }
 }
 
-class Parser {
+export class Parser {
     private lexer: Lexer;
 
     // parsing results
     private ast: Array<StatementNode>;
-    private errors: Array<Error>;
+    private errors: Array<ParsingError>;
 
     private prefixTable: Map<TokenType, PrefixFn>;
     private infixTable: Map<TokenType, InfixFn>;
@@ -79,7 +71,7 @@ class Parser {
         this.infixTable = new Map();
 
         this.lexer = lexer;
-        this.errors = new Array<Error>();
+        this.errors = new Array<ParsingError>();
         this.ast = new Array<StatementNode>();
 
         // Prepare parser state by loading the first two tokens
@@ -112,10 +104,11 @@ class Parser {
             }
             this.advanceToken();
         }
-        return false;
+
+        return this.errors.length != 0;
     }
 
-    public getErrors(): Array<Error> | null {
+    public getErrors(): Array<ParsingError> | null {
         return this.errors;
     }
 
@@ -156,7 +149,8 @@ class Parser {
             // of a subprogram, some declaration like var, or the main function.
             default:
                 this.pushErrorAndRecover(
-                    new Error(
+                    newParsingError(
+                        ErrorType.UnexpectedExpression,
                         `Unexpected expression: ${this.currentToken!.literal} [${this.currentToken!.type}]`,
                         this.currentToken!,
                     ),
@@ -168,7 +162,9 @@ class Parser {
     private parseVariablesDeclaration(): StatementNode | null {
         // There has to be a new line character after the "VAR" keyword
         if (!this.nextTokenIs("NEWLINE")) {
-            this.pushErrorAndRecover(new Error("Expected New Line", this.currentToken!));
+            this.pushErrorAndRecover(
+                newParsingError(ErrorType.ExpectedNewLine, "Expected New Line", this.currentToken!),
+            );
         }
 
         this.advanceToken(); // skip over "VAR"
@@ -181,7 +177,13 @@ class Parser {
         while (this.currentTokenIs("IDENTIFIER")) {
             var declaration = this.parseVariableStatement();
             if (declaration == null) {
-                this.pushErrorAndRecover(new Error("Expected variable declaration", this.currentToken!));
+                this.pushErrorAndRecover(
+                    newParsingError(
+                        ErrorType.ExpectedVarDeclaration,
+                        "Expected variable declaration",
+                        this.currentToken!,
+                    ),
+                );
                 return null;
             }
             variables.push(declaration);
@@ -207,7 +209,8 @@ class Parser {
         // check equals sign and skip over
         if (!this.currentTokenIs("ASSIGN")) {
             this.pushErrorAndRecover(
-                new Error(
+                newParsingError(
+                    ErrorType.ExpectedEqualSign,
                     `Expected '=' after identifier, got ${this.currentToken!.literal}`,
                     this.currentToken!,
                 ),
@@ -231,7 +234,8 @@ class Parser {
         var prefix = this.prefixTable.get(this.currentToken!.type);
         if (prefix == undefined) {
             this.pushErrorAndRecover(
-                new Error(
+                newParsingError(
+                    ErrorType.NoPrefixFound,
                     `No prefix parser for token ${this.currentToken!.type}`,
                     this.currentToken!,
                 ),
@@ -285,7 +289,7 @@ class Parser {
     // =                Utils               =
     // ======================================
 
-    private pushErrorAndRecover(error: Error) {
+    private pushErrorAndRecover(error: ParsingError) {
         this.errors.push(error);
         this.skipUntilNextStatement();
     }
@@ -406,5 +410,3 @@ class Parser {
         console.log("========================");
     }
 }
-
-export { Parser };

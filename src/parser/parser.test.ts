@@ -10,6 +10,7 @@ import {
     ExpressionNode,
     astToString,
 } from "./ast.ts";
+import { type ParsingError, ErrorType } from "./errors.ts";
 
 describe("Parser simple tests", () => {
     it("parses a simple variable definition", () => {
@@ -63,7 +64,7 @@ describe("Parser simple tests", () => {
                         var 
                             var1 = 1
                         var 
-                            var2 = 2`; 
+                            var2 = 2`;
 
         const ast = parseAndGetAst(sourceCode);
         expect(ast.length).toBe(2);
@@ -77,6 +78,15 @@ describe("Parser simple tests", () => {
         const decl2 = stmt2.declarations[0] as VarDeclaration;
         expectVarDeclaration(decl2, "var2");
         expectNumberNode(decl2.value!, "2");
+    });
+
+    // --- Parsing errors ---
+    it("should error (NEWLINE expected) on line 1", () => {
+        const sourceCode = `var var1 = 1`;
+        const errors = parseAndGetAstWithErrors(sourceCode);
+        expect(errors.length).toBe(1);
+        expect(errors[0]?.type).toBe(ErrorType.ExpectedNewLine);
+        expect(errors[0]?.token.row).toBe(1);
     });
 });
 
@@ -100,20 +110,22 @@ function parseAndGetAst(sourceCode: string): StatementNode[] {
     return ast!;
 }
 
-function parseAndGetAstWithErrors(sourceCode: string): StatementNode[] {
+function parseAndGetAstWithErrors(sourceCode: string): ParsingError[] {
     const lexer = new Lexer(sourceCode);
     const parser = new Parser(lexer);
 
     const hasErrors = parser.parseProgram();
-    expect(hasErrors).toBe(true);
-
     const ast = parser.getAst();
-    expect(ast).not.toBeNull();
+    const errors = parser.getErrors();
 
     // Appears only if the test fails
-    console.error(ast);
+    console.error(astToString(ast));
+    console.error(errors);
 
-    return ast!;
+    expect(hasErrors).toBe(true);
+    expect(errors).not.toBeNull();
+
+    return errors!;
 }
 
 function expectVariablesStatement(

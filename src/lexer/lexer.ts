@@ -18,12 +18,15 @@ type TokenType =
 class Token {
     type: TokenType;
     literal: string;
-    row: number;
 
-    constructor(type: TokenType, literal: string, position: number) {
+    row: number;
+    column: number;
+
+    constructor(type: TokenType, literal: string, row: number, column: number) {
         this.type = type;
         this.literal = literal;
-        this.row = position;
+        this.row = row;
+        this.column = column;
     }
 
     public string(): string {
@@ -76,9 +79,12 @@ const keywords: Record<string, TokenType> = {
 
 class Lexer {
     private input: string;
-    private position: number = 0; // posición actual en input (char leído)
     private readPosition: number = 0; // posición siguiente a leer
     private ch: string = ""; // char actual
+
+    // Used for error messages
+    private column: number = 1;
+    private row: number = 1;
 
     constructor(input: string) {
         this.input = input;
@@ -106,7 +112,7 @@ class Lexer {
             // @ts-ignore
             this.ch = this.input[this.readPosition];
         }
-        this.position = this.readPosition;
+        this.column = this.readPosition;
         this.readPosition++;
     }
 
@@ -125,23 +131,23 @@ class Lexer {
     }
 
     private readIdentifier(): string {
-        const start = this.position;
+        const start = this.column;
         while (this.isLetter(this.ch) || this.isDigit(this.ch)) {
             this.readChar();
         }
-        return this.input.slice(start, this.position);
+        return this.input.slice(start, this.column);
     }
 
     private readNumber(): string {
-        const start = this.position;
+        const start = this.column;
         while (this.isDigit(this.ch)) {
             this.readChar();
         }
-        return this.input.slice(start, this.position);
+        return this.input.slice(start, this.column);
     }
 
     private newToken(type: TokenType, ch: string): Token {
-        return new Token(type, ch, this.position);
+        return new Token(type, ch, this.row, this.column);
     }
 
     // ======================================
@@ -227,6 +233,7 @@ class Lexer {
                 break;
             case "\n":
                 tok = this.newToken("NEWLINE", this.ch);
+                this.row++;
                 break;
             default:
                 if (this.isLetter(this.ch)) {
