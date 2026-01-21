@@ -10,6 +10,8 @@ import {
     ExpressionNode,
     astToString,
     TypeExpression,
+    Identifier,
+    PrefixExpression,
 } from "./ast.ts";
 import { type ParsingError, ErrorType } from "./errors.ts";
 
@@ -110,31 +112,86 @@ describe("Simple variable declarations", () => {
 describe("Simple mathematical operations", () => {
     it("should parse a variable definition with an addition expression", () => {
         const sourceCode = `var
-                                x = 5 + 5`;
+                            x = 5 + 5`;
 
         const ast = parseAndGetAst(sourceCode);
         expect(ast.length).toBe(1);
 
         const stmt = expectVariablesStatement(ast[0]!, 1);
-
         const decl = stmt.declarations[0] as VarDeclaration;
         expectVarDeclaration(decl, "x");
-        expectInfixExpression(decl.value!, "+", "5", "5");
+
+        // Assert that decl.value is an InfixExpression with left and right as NumberNodes
+        expectExpressionNode(decl.value!, {
+            type: "Infix",
+            operator: "+",
+            left: { type: "Number", value: "5" },
+            right: { type: "Number", value: "5" },
+        });
     });
 
-    it("it should parse a simple expression with line jumps in between", () => {
+    it("should parse a simple expression with line jumps in between", () => {
         const sourceCode = `var
                             x = 5 + 
-                                    5`;
+                                5`;
 
         const ast = parseAndGetAst(sourceCode);
         expect(ast.length).toBe(1);
 
         const stmt = expectVariablesStatement(ast[0]!, 1);
-
         const decl = stmt.declarations[0] as VarDeclaration;
         expectVarDeclaration(decl, "x");
-        expectInfixExpression(decl.value!, "+", "5", "5");
+
+        expectExpressionNode(decl.value!, {
+            type: "Infix",
+            operator: "+",
+            left: { type: "Number", value: "5" },
+            right: { type: "Number", value: "5" },
+        });
+    });
+
+    it("should parse a complex arithmetic expression with precedence and parentheses", () => {
+        const sourceCode = `var 
+                               x = 2 + 3 * 4 - 8 / 2 ^ (1 + 1)`;
+
+        const ast = parseAndGetAst(sourceCode);
+        expect(ast.length).toBe(1);
+
+        const stmt = expectVariablesStatement(ast[0]!, 1);
+        const decl = stmt.declarations[0] as VarDeclaration;
+        expectVarDeclaration(decl, "x");
+
+        expectExpressionNode(decl.value!, {
+            type: "Infix",
+            operator: "-",
+            left: {
+                type: "Infix",
+                operator: "+",
+                left: { type: "Number", value: "2" },
+                right: {
+                    type: "Infix",
+                    operator: "*",
+                    left: { type: "Number", value: "3" },
+                    right: { type: "Number", value: "4" },
+                },
+            },
+            right: {
+                type: "Infix",
+                operator: "/",
+                left: { type: "Number", value: "8" },
+                right: {
+                    type: "Infix",
+                    operator: "^",
+                    left: { type: "Number", value: "2" },
+                    right: {
+                        type: "Infix",
+                        operator: "+",
+                        left: { type: "Number", value: "1" },
+                        right: { type: "Number", value: "1" },
+                    },
+                },
+            },
+        });
     });
 });
 
@@ -179,18 +236,35 @@ function parseAndGetAstWithErrors(sourceCode: string): ParsingError[] {
     return errors!;
 }
 
-function expectVariablesStatement(
-    node: StatementNode,
-    declarationsCount: number,
-): VariablesStatement {
-    expect(node).toBeInstanceOf(VariablesStatement);
-    const stmt = node as VariablesStatement;
-    expect(stmt.declarations.length).toBe(declarationsCount);
-    return stmt;
+// Generic expression checker, dispatches to specific assert function
+export function expectExpressionNode(
+    expr: ExpressionNode | null,
+    expected: ExpectedExpression,
+): void {
+    expect(expr).not.toBeNull();
+    if (expected.type === "Number") {
+        expectNumberNode(expr!, expected.value);
+    } else if (expected.type === "Identifier") {
+        expectIdentifierNode(expr!, expected.value);
+    } else if (expected.type === "Infix") {
+        expectInfixExpression(expr!, expected.operator, expected.left, expected.right);
+    } else if (expected.type === "Prefix") {
+        expectPrefixExpression(expr!, expected.operator, expected.right);
+    } else if (expected.type === "Type") {
+        expectTypeExpression(expr!, expected.value);
+    } else {
+        throw new Error("Unknown expected expression type");
+    }
 }
 
-function expectVarDeclaration(decl: VarDeclaration, identifier: string): void {
-    expect(decl.identifier.value).toBe(identifier);
+// -----------------------------------------------
+// Specific assertion helpers for node types
+// -----------------------------------------------
+
+// Assert VarDeclaration with expected identifier name
+export function expectVarDeclaration(decl: VarDeclaration, expectedName: string): void {
+    expect(decl).toBeInstanceOf(VarDeclaration);
+    expect(decl.identifier.value).toBe(expectedName);
     expect(decl.value).not.toBeNull();
 }
 
@@ -201,15 +275,58 @@ function expectNumberNode(expr: ExpressionNode | null, value: string): void {
     expect(num.value).toBe(value);
 }
 
-function expectInfixExpression(
+// Assert VariablesStatement with expected number of declarations
+export function expectVariablesStatement(
+    node: StatementNode,
+    expectedCount: number,
+): VariablesStatement {
+    expect(node).toBeInstanceOf(VariablesStatement);
+    const stmt = node as VariablesStatement;
+    expect(stmt.declarations.length).toBe(expectedCount);
+    return stmt;
+}
+
+export function expectIdentifierNode(expr: ExpressionNode, value: string): void {
+    expect(expr).toBeInstanceOf(Identifier);
+    const id = expr as Identifier;
+    expect(id.value).toBe(value);
+}
+
+export function expectTypeExpression(expr: ExpressionNode, value: string): void {
+    expect(expr).toBeInstanceOf(TypeExpression);
+    const typeExpr = expr as TypeExpression;
+    expect(typeExpr.value).toBe(value);
+}
+
+export function expectPrefixExpression(
     expr: ExpressionNode,
     operator: string,
-    leftValue: string,
-    rightValue: string,
+    rightExpected: ExpectedExpression,
+): void {
+    expect(expr).toBeInstanceOf(PrefixExpression);
+    const prefix = expr as PrefixExpression;
+    expect(prefix.operator).toBe(operator);
+    expectExpressionNode(prefix.right, rightExpected);
+}
+
+export function expectInfixExpression(
+    expr: ExpressionNode,
+    operator: string,
+    leftExpected: ExpectedExpression,
+    rightExpected: ExpectedExpression,
 ): void {
     expect(expr).toBeInstanceOf(InfixExpression);
     const infix = expr as InfixExpression;
     expect(infix.operator).toBe(operator);
-    expectNumberNode(infix.left, leftValue);
-    expectNumberNode(infix.right, rightValue);
+    expectExpressionNode(infix.left, leftExpected);
+    expectExpressionNode(infix.right!, rightExpected);
 }
+
+// Define a type to represent expected expressions for easy composition
+
+export type ExpectedExpression =
+    | { type: "Number"; value: string }
+    | { type: "Identifier"; value: string }
+    | { type: "Type"; value: string }
+    | { type: "Prefix"; operator: string; right: ExpectedExpression }
+    | { type: "Infix"; operator: string; left: ExpectedExpression; right: ExpectedExpression };

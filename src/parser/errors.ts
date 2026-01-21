@@ -9,6 +9,7 @@ export enum ErrorType {
     ExpectedNewLine = "ExpectedNewLine",
     ExpectedVarDeclaration = "ExpectedVarDeclaration",
     ExpectedEqualSign = "ExpectedEqualSign",
+    ExpectedRightParen = "ExpectedLeftParen",
     NoPrefixFound = "NoPrefixFound",
     ExpectedTypeAnnotation = "ExpectedTypeAnnotation",
 }

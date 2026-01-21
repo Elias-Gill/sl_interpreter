@@ -12,18 +12,19 @@ import {
 import { newParsingError, type ParsingError } from "./errors.ts";
 import { ErrorType } from "./errors.ts";
 
-type InfixFn = (exp: ExpressionNode) => ExpressionNode;
-type PrefixFn = () => ExpressionNode;
+type InfixFn = (exp: ExpressionNode) => ExpressionNode | null;
+type PrefixFn = () => ExpressionNode | null;
 
 // WARNING: the order matters here (a lot) !!
 // prettier-ignore
 enum Precedence {
     MIN = 0,        // LOWEST
-    EQUALS,         // ==, !=
+    EQUALS,         // ==, <>
     GREATLESS,      // <, >
     ADITION,        // +, -
     DIVISION,       // *, /
     PREFIX,         // -X, !X
+    POW,            // ^
     PARENTESIS,     // foo(bar), (expresión)
     MAX,
 }
@@ -43,12 +44,14 @@ function getPrecedence(token: Token): number {
         case "ASTERISK":
         case "SLASH":
             return Precedence.DIVISION;
-        // CALL: function(), LPAREN
-        case "LPAREN":
-            return Precedence.PARENTESIS;
         // PREFIX operators
         case "NOT":
             return Precedence.PREFIX;
+        case "POW":
+            return Precedence.POW;
+        // CALL: function(), LPAREN
+        case "LPAREN":
+            return Precedence.PARENTESIS;
         default:
             return Precedence.MIN;
     }
@@ -82,6 +85,7 @@ export class Parser {
         // Register prefix functions
         this.registerPrefix("IDENTIFIER", this.parseIdentifier.bind(this));
         this.registerPrefix("NUMBER", this.parseNumber.bind(this));
+        this.registerPrefix("LPAREN", this.parseParenthesis.bind(this));
 
         // Register infix funcions
         this.registerInfix("PLUS", this.parseInfixExpression.bind(this));
@@ -250,6 +254,10 @@ export class Parser {
         }
 
         var exp = prefix();
+        // Then an error ocurred and the parser is already in a recover state
+        if (exp == null) {
+            return null;
+        }
 
         while (!this.nextTokenIs("SEMICOLON") && curPrecedence < getPrecedence(this.nextToken!)) {
             var infix = this.infixTable.get(this.nextToken!.type);
@@ -261,6 +269,10 @@ export class Parser {
             this.advanceToken();
 
             exp = infix(exp);
+            // Then an error ocurred and the parser is already in a recover state
+            if (exp == null) {
+                return null;
+            }
         }
 
         return exp;
@@ -272,6 +284,26 @@ export class Parser {
 
     private parseNumber(): ExpressionNode {
         return new NumberNode(this.currentToken!);
+    }
+
+    private parseParenthesis(): ExpressionNode | null {
+        this.advanceToken();
+        const result = this.parseExpression(Precedence.MIN);
+
+        // check and skip over left parenthesis
+        if (!this.nextTokenIs("RPAREN")) {
+            this.pushErrorAndRecover(
+                newParsingError(
+                    ErrorType.ExpectedRightParen,
+                    `Expected closing parenthesis ')', but got '${this.currentToken.string()}'`,
+                    this.currentToken,
+                ),
+            );
+            return null;
+        }
+        this.advanceToken();
+
+        return result;
     }
 
     // Parses the type annotaion if exists. If not exists just returns null
