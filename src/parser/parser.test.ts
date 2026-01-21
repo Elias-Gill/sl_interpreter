@@ -108,9 +108,24 @@ describe("Simple variable declarations", () => {
 });
 
 describe("Simple mathematical operations", () => {
-    it("parses a variable definition and addition expression", () => {
+    it("should parse a variable definition with an addition expression", () => {
         const sourceCode = `var
                                 x = 5 + 5`;
+
+        const ast = parseAndGetAst(sourceCode);
+        expect(ast.length).toBe(1);
+
+        const stmt = expectVariablesStatement(ast[0]!, 1);
+
+        const decl = stmt.declarations[0] as VarDeclaration;
+        expectVarDeclaration(decl, "x");
+        expectInfixExpression(decl.value!, "+", "5", "5");
+    });
+
+    it("it should parse a simple expression with line jumps in between", () => {
+        const sourceCode = `var
+                            x = 5 + 
+                                    5`;
 
         const ast = parseAndGetAst(sourceCode);
         expect(ast.length).toBe(1);

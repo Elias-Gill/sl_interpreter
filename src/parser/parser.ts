@@ -316,6 +316,7 @@ export class Parser {
         exp.operator = token!.literal;
         exp.left = left;
 
+        this.consumeNewLines();
         this.advanceToken();
 
         exp.right = this.parseExpression(precedence);
