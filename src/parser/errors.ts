@@ -25,7 +25,7 @@ export function newParsingError(type: ErrorType, message: string, token: Token):
     return {
         type: type,
         token: token,
-        row: token.row,
+        row: token.lineNumber,
         column: token.column,
         message: message,
     };

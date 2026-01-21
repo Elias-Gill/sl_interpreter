@@ -19,13 +19,13 @@ class Token {
     type: TokenType;
     literal: string;
 
-    row: number;
+    lineNumber: number;
     column: number;
 
     constructor(type: TokenType, literal: string, row: number, column: number) {
         this.type = type;
         this.literal = literal;
-        this.row = row;
+        this.lineNumber = row;
         this.column = column;
     }
 
@@ -79,12 +79,12 @@ const keywords: Record<string, TokenType> = {
 
 class Lexer {
     private input: string;
-    private readPosition: number = 0; // posición siguiente a leer
-    private ch: string = ""; // char actual
+    private readPosition: number = 0;
+    private currentChar: string = "";
 
     // Used for error messages
     private column: number = 1;
-    private row: number = 1;
+    private currentLine: number = 1;
 
     constructor(input: string) {
         this.input = input;
@@ -94,6 +94,22 @@ class Lexer {
     // ======================================
     // =          Private Methods           =
     // ======================================
+
+    private skipComments() {
+        // Primero revisar que no estemos frente a un comentario, en cuyo caso
+        // simplemente ignoramos toda la linea
+        if (this.currentChar == "/" && this.peekChar() == "/") {
+            this.readChar();
+            // @ts-ignore (typescript trata de hacer comparaciones que no tienen
+            // sentido)
+            while (this.currentChar != "\n" && this.currentChar != "") {
+                // Saltarse todo hasta el primer salto de linea o el final del archivo
+                this.readChar();
+            }
+            this.readChar(); // Skip '\n'
+            this.skipWhitespace();
+        }
+    }
 
     // Mirar un caracter por delante del caracter actual.
     private peekChar() {
@@ -107,10 +123,10 @@ class Lexer {
 
     private readChar() {
         if (this.readPosition >= this.input.length) {
-            this.ch = "";
+            this.currentChar = "";
         } else {
             // @ts-ignore
-            this.ch = this.input[this.readPosition];
+            this.currentChar = this.input[this.readPosition];
         }
         this.column = this.readPosition;
         this.readPosition++;
@@ -125,14 +141,14 @@ class Lexer {
     }
 
     private skipWhitespace() {
-        while (this.ch === " " || this.ch === "\t" || this.ch === "\r") {
+        while (this.currentChar === " " || this.currentChar === "\t" || this.currentChar === "\r") {
             this.readChar();
         }
     }
 
     private readIdentifier(): string {
         const start = this.column;
-        while (this.isLetter(this.ch) || this.isDigit(this.ch)) {
+        while (this.isLetter(this.currentChar) || this.isDigit(this.currentChar)) {
             this.readChar();
         }
         return this.input.slice(start, this.column);
@@ -140,14 +156,15 @@ class Lexer {
 
     private readNumber(): string {
         const start = this.column;
-        while (this.isDigit(this.ch)) {
+        while (this.isDigit(this.currentChar)) {
             this.readChar();
         }
         return this.input.slice(start, this.column);
     }
 
     private newToken(type: TokenType, ch: string): Token {
-        return new Token(type, ch, this.row, this.column);
+        const tokenStart = this.column - ch.length;
+        return new Token(type, ch, this.currentLine, tokenStart);
     }
 
     // ======================================
@@ -159,84 +176,73 @@ class Lexer {
 
         let tok: Token;
 
-        // Primero revisar que no estemos frente a un comentario, en cuyo caso
-        // simplemente ignoramos toda la linea
-        if (this.ch == "/" && this.peekChar() == "/") {
-            this.readChar();
-            // @ts-ignore (typescript trata de hacer comparaciones que no tienen
-            // sentido)
-            while (this.ch != "\n" && this.ch != "") {
-                // Saltarse todo hasta el primer salto de linea o el final del archivo
-                this.readChar();
-            }
-            this.readChar(); // Skip '\n'
-            this.skipWhitespace();
-        }
+        this.skipComments();
 
-        switch (this.ch) {
+        switch (this.currentChar) {
             case ";":
-                tok = this.newToken("SEMICOLON", this.ch);
+                tok = this.newToken("SEMICOLON", this.currentChar);
                 break;
             case '"':
-                tok = this.newToken("DQUOTE", this.ch);
+                tok = this.newToken("DQUOTE", this.currentChar);
                 break;
             case "'":
-                tok = this.newToken("SQUOTE", this.ch);
+                tok = this.newToken("SQUOTE", this.currentChar);
                 break;
             case "/":
-                tok = this.newToken("SLASH", this.ch);
+                tok = this.newToken("SLASH", this.currentChar);
                 break;
             case "*":
-                tok = this.newToken("ASTERISK", this.ch);
+                tok = this.newToken("ASTERISK", this.currentChar);
                 break;
             case "{":
-                tok = this.newToken("LBRACE", this.ch);
+                tok = this.newToken("LBRACE", this.currentChar);
                 break;
             case "}":
-                tok = this.newToken("RBRACE", this.ch);
+                tok = this.newToken("RBRACE", this.currentChar);
                 break;
             case "[":
-                tok = this.newToken("LBRACKET", this.ch);
+                tok = this.newToken("LBRACKET", this.currentChar);
                 break;
             case "]":
-                tok = this.newToken("RBRACKET", this.ch);
+                tok = this.newToken("RBRACKET", this.currentChar);
                 break;
             case "(":
-                tok = this.newToken("LPAREN", this.ch);
+                tok = this.newToken("LPAREN", this.currentChar);
                 break;
             case ")":
-                tok = this.newToken("RPAREN", this.ch);
+                tok = this.newToken("RPAREN", this.currentChar);
                 break;
             case ":":
-                tok = this.newToken("COLON", this.ch);
+                tok = this.newToken("COLON", this.currentChar);
                 break;
             case "=":
-                tok = this.newToken("ASSIGN", this.ch);
+                tok = this.newToken("ASSIGN", this.currentChar);
                 break;
             case ">":
-                tok = this.newToken("GT", this.ch);
+                tok = this.newToken("GT", this.currentChar);
                 break;
             case "<":
-                tok = this.newToken("LT", this.ch);
+                tok = this.newToken("LT", this.currentChar);
                 break;
             case "+":
-                tok = this.newToken("PLUS", this.ch);
+                tok = this.newToken("PLUS", this.currentChar);
                 break;
             case "-":
-                tok = this.newToken("MINUS", this.ch);
+                tok = this.newToken("MINUS", this.currentChar);
                 break;
             case "^":
-                tok = this.newToken("POW", this.ch);
+                tok = this.newToken("POW", this.currentChar);
                 break;
             case "":
                 tok = this.newToken("EOF", "");
                 break;
             case "\n":
-                tok = this.newToken("NEWLINE", this.ch);
-                this.row++;
+                tok = this.newToken("NEWLINE", this.currentChar);
+                this.currentLine++;
+                this.column = 0;
                 break;
             default:
-                if (this.isLetter(this.ch)) {
+                if (this.isLetter(this.currentChar)) {
                     const literal = this.readIdentifier();
                     const type = keywords[literal.toLowerCase()] || "IDENTIFIER";
 
@@ -244,11 +250,11 @@ class Lexer {
                         throw new Error(`Token '${literal}' is reserved but not allowed.`);
                     }
                     return this.newToken(type, literal);
-                } else if (this.isDigit(this.ch)) {
+                } else if (this.isDigit(this.currentChar)) {
                     const literal = this.readNumber();
                     return this.newToken("NUMBER", literal);
                 } else {
-                    return this.newToken("ILLEGAL", this.ch);
+                    return this.newToken("ILLEGAL", this.currentChar);
                 }
         }
 

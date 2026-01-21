@@ -144,4 +144,19 @@ describe("Lexer basic tests", () => {
         const tok = lexer.nextToken();
         expect(tok.type).toBe("VAR");
     });
+
+    it("should lex the 'var' token in column 10, line 2", () => {
+        const input = `
+         var
+`;
+
+        const lexer = new Lexer(input);
+        lexer.nextToken(); // skip new line
+
+        const tok = lexer.nextToken();
+        expect(tok.type).toBe("VAR");
+        expect(tok.literal).toBe("var");
+        expect(tok.lineNumber).toBe(2);
+        expect(tok.column).toBe(10);
+    });
 });

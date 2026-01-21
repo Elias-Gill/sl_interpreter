@@ -92,7 +92,7 @@ describe("Simple variable declarations", () => {
         const errors = parseAndGetAstWithErrors(sourceCode);
         expect(errors.length).toBe(1);
         expect(errors[0]?.type).toBe(ErrorType.ExpectedNewLine);
-        expect(errors[0]?.token.row).toBe(1);
+        expect(errors[0]?.token.lineNumber).toBe(1);
     });
 
     it("should error (ExpectedTypeAnnotation) after colon (':')", () => {
